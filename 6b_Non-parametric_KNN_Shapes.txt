@@ -1,0 +1,76 @@
+#Use non-parametric K-Nearest Neighbor (KNN) techniques to classify grayscale images of shapes (e.g., circles, squares, and triangles). Evaluate and compare the classification accuracy of both methodsimport numpy as np
+import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.metrics import accuracy_score, confusion_matrix
+from skimage.draw import disk, rectangle, polygon
+from skimage.transform import resize                     #pip install scikit-image
+import seaborn as sns
+
+# Function to generate grayscale images of shapes
+def generate_shape(shape, image_size=28):
+    img = np.zeros((image_size, image_size), dtype=np.float32)
+
+    if shape == 'circle':
+        rr, cc = disk((image_size//2, image_size//2), radius=8)
+    elif shape == 'square':
+        start = image_size//2 - 8
+        end = image_size//2 + 8
+        rr, cc = rectangle(start=(start, start), end=(end, end))
+    elif shape == 'triangle':
+        r = np.array([image_size//2 - 8, image_size//2 + 8, image_size//2])
+        c = np.array([image_size//2 - 8, image_size//2 - 8, image_size//2 + 8])
+        rr, cc = polygon(r, c)
+    else:
+        raise ValueError("Unknown shape")
+
+    img[rr, cc] = 1.0
+    return img
+
+# Create dataset
+shapes = ['circle', 'square', 'triangle']
+images = []
+labels = []
+
+for label, shape in enumerate(shapes):
+    for _ in range(300):
+        img = generate_shape(shape)
+        images.append(img.flatten())
+        labels.append(label)
+
+X = np.array(images)
+y = np.array(labels)
+
+# Split data
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+
+# EDA: Show sample images
+fig, axes = plt.subplots(1, 3, figsize=(9, 3))
+for i, shape in enumerate(shapes):
+    ax = axes[i]
+    ax.imshow(X[y == i][0].reshape(28, 28), cmap='gray')
+    ax.set_title(shape)
+    ax.axis('off')
+plt.suptitle("Sample Images of Shapes")
+plt.tight_layout()
+plt.show()
+
+# KNN Classifier
+knn = KNeighborsClassifier(n_neighbors=3)
+knn.fit(X_train, y_train)
+y_pred = knn.predict(X_test)
+
+# Evaluation
+acc = accuracy_score(y_test, y_pred)
+conf_mat = confusion_matrix(y_test, y_pred)
+
+print(f"KNN Classification Accuracy: {acc:.2f}")
+print("Confusion Matrix:\n", conf_mat)
+
+# Confusion Matrix Heatmap
+sns.heatmap(conf_mat, annot=True, fmt='d', xticklabels=shapes, yticklabels=shapes, cmap='Blues')
+plt.xlabel('Predicted')
+plt.ylabel('True')
+plt.title('KNN Confusion Matrix')
+plt.show()
+

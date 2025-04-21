@@ -1,0 +1,55 @@
+#To design and implement a pattern recognition system to identify and extract unique species patterns from the Iris dataset using machine learning techniques.
+
+#install :- pip install numpy pandas scikit-learn matplotlib seaborn
+
+import numpy as np
+import pandas as pd
+from sklearn.datasets import load_iris
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import classification_report, confusion_matrix
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+# Load the Iris dataset
+iris = load_iris()
+X = pd.DataFrame(iris.data, columns=iris.feature_names)
+y = pd.Series(iris.target, name="species")
+species_names = iris.target_names
+
+# Split into training and testing sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Train a Random Forest Classifier
+clf = RandomForestClassifier(n_estimators=100, random_state=42)
+clf.fit(X_train, y_train)
+
+# Make predictions
+y_pred = clf.predict(X_test)
+
+# Evaluation
+print("Classification Report:")
+print(classification_report(y_test, y_pred, target_names=species_names))
+
+print("Confusion Matrix:")
+cm = confusion_matrix(y_test, y_pred)
+sns.heatmap(cm, annot=True, cmap="Blues", fmt='g', xticklabels=species_names, yticklabels=species_names)
+plt.xlabel('Predicted')
+plt.ylabel('Actual')
+plt.title('Confusion Matrix')
+plt.show()
+
+# Feature importance (i.e., patterns that help identify each species)
+feature_importances = pd.DataFrame({
+    'Feature': iris.feature_names,
+    'Importance': clf.feature_importances_
+}).sort_values(by='Importance', ascending=False)
+
+print("\nFeature Importances (Patterns):")
+print(feature_importances)
+
+# Optional: Visualize feature importance
+sns.barplot(x='Importance', y='Feature', data=feature_importances)
+plt.title('Feature Importance for Iris Species Classification')
+plt.show()
+

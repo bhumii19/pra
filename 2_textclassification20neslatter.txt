@@ -1,0 +1,68 @@
+#To design and implement a text classification model that effectively identifies, extracts features, and classifies documents from the 20 Newsgroups dataset into one of the 20 predefined categories using pattern recognition techniques.
+
+# Import Libraries
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+from sklearn.datasets import fetch_20newsgroups
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
+from sklearn.model_selection import train_test_split
+
+import warnings
+warnings.filterwarnings("ignore")
+
+# Load the Dataset
+newsgroups = fetch_20newsgroups(subset='all')
+X = newsgroups.data
+y = newsgroups.target
+target_names = newsgroups.target_names
+
+# Convert to DataFrame for EDA
+df = pd.DataFrame({'text': X, 'category': y})
+df['category_name'] = df['category'].apply(lambda x: target_names[x])
+
+# EDA - Category Distribution
+plt.figure(figsize=(12, 6))
+sns.countplot(data=df, x='category_name', order=df['category_name'].value_counts().index)
+plt.xticks(rotation=90)
+plt.title("Category Distribution in 20 Newsgroups")
+plt.tight_layout()
+plt.show()
+
+# EDA - Text Length Analysis
+df['text_length'] = df['text'].apply(lambda x: len(x.split()))
+
+plt.figure(figsize=(10, 5))
+sns.histplot(df['text_length'], bins=50, kde=True)
+plt.title("Distribution of Text Length")
+plt.xlabel("Number of Words")
+plt.tight_layout()
+plt.show()
+
+# Split and Preprocess
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# TF-IDF Vectorization
+vectorizer = TfidfVectorizer(stop_words='english', max_df=0.5)
+X_train_tfidf = vectorizer.fit_transform(X_train)
+X_test_tfidf = vectorizer.transform(X_test)
+
+# Train Classifier (Logistic Regression)
+model = LogisticRegression(max_iter=1000)
+model.fit(X_train_tfidf, y_train)
+y_pred = model.predict(X_test_tfidf)
+
+# Evaluation
+print("Accuracy Score:", accuracy_score(y_test, y_pred))
+print("\nClassification Report:\n", classification_report(y_test, y_pred, target_names=target_names))
+
+# Confusion Matrix
+plt.figure(figsize=(12, 10))
+sns.heatmap(confusion_matrix(y_test, y_pred), annot=False, cmap='Blues')
+plt.title("Confusion Matrix")
+plt.tight_layout()
+plt.show()

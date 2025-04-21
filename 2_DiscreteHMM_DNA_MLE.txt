@@ -1,0 +1,67 @@
+#Build a Discrete Hidden Markov Model (HMM) to analyze DNA sequences and predict gene regions. Use Maximum Likelihood Estimation to train the model with a given dataset of labeled sequences 
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+from hmmlearn import hmm    #pip install hmmlearn
+from sklearn.metrics import adjusted_rand_score
+
+# --------------------------
+# Step 1: Simulated DNA Sequence Data
+# --------------------------
+# Example DNA sequence (length = 20)
+sequence = list("ATGCGCGTTAGCTAGCTAGC")
+# Region labels (must match length = 20)
+labels = ['gene'] * 10 + ['non-gene'] * 10
+
+# Confirm same length
+assert len(sequence) == len(labels)
+
+# Encode observations
+obs_map = {'A': 0, 'C': 1, 'G': 2, 'T': 3}
+obs_seq = np.array([[obs_map[nuc]] for nuc in sequence])
+label_map = {'gene': 0, 'non-gene': 1}
+true_states = [label_map[label] for label in labels]
+
+# DataFrame for EDA
+df = pd.DataFrame({
+    'Nucleotide': sequence,
+    'Region': labels
+})
+
+# --------------------------
+# Step 2: EDA
+# --------------------------
+print("=== DNA Data Info ===")
+print(df.info())
+
+print("\n=== Class Distribution ===")
+print(df['Region'].value_counts())
+
+# Countplot of nucleotides by region
+plt.figure(figsize=(8, 4))
+sns.countplot(data=df, x='Nucleotide', hue='Region')
+plt.title('Nucleotide Frequency by Region')
+plt.show()
+
+# --------------------------
+# Step 3: Discrete HMM Model
+# --------------------------
+model = hmm.MultinomialHMM(n_components=2, n_iter=100, tol=0.01)
+model.fit(obs_seq)
+
+# Predict hidden states
+logprob, predicted_states = model.decode(obs_seq, algorithm="viterbi")
+
+# --------------------------
+# Step 4: Evaluation
+# --------------------------
+print("\nPredicted States:", predicted_states)
+
+ari = adjusted_rand_score(true_states, predicted_states)
+print("\nAdjusted Rand Index:", round(ari, 2))
+
+# Comparison
+df['Predicted_Region'] = ['gene' if s == 0 else 'non-gene' for s in predicted_states]
+print("\n=== Predicted vs Actual ===")
+print(df.head(20))

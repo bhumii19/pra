@@ -1,0 +1,70 @@
+#Implement a Hidden Markov Model (HMM) to recognize the sequence of weather patterns (e.g., sunny, cloudy, rainy) based on temperature and humidity observations. Use both discrete and continuous HMMs to compare their performance. 
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+from hmmlearn import hmm                 #pip install hmmlearn
+from sklearn.metrics import adjusted_rand_score
+
+# ------------------------------
+# Step 1: Simulated Data
+# ------------------------------
+states = ['Sunny', 'Cloudy', 'Rainy']
+observations = np.array([
+    [1, 1], [1, 2], [2, 2], [2, 3],
+    [3, 3], [3, 2], [2, 1], [1, 1]
+])
+labels = [0, 0, 1, 1, 2, 2, 1, 0]  # 0: Sunny, 1: Cloudy, 2: Rainy
+
+df = pd.DataFrame(observations, columns=['Temperature', 'Humidity'])
+df['Weather'] = [states[i] for i in labels]
+
+# ------------------------------
+# Step 2: EDA
+# ------------------------------
+print("\n=== EDA: Basic Info ===")
+print(df.info())
+
+print("\n=== EDA: Description ===")
+print(df.describe())
+
+# Pairplot
+sns.pairplot(df, hue='Weather')
+plt.suptitle('Temperature vs Humidity by Weather Type', y=1.02)
+plt.show()
+
+# Heatmap (fixed to include only numeric columns)
+plt.figure(figsize=(6, 4))
+sns.heatmap(df[['Temperature', 'Humidity']].corr(), annot=True, cmap='coolwarm')
+plt.title('Correlation Heatmap')
+plt.show()
+
+# ------------------------------
+# Step 3: Discrete HMM
+# ------------------------------
+obs_map = {(1, 1): 0, (1, 2): 1, (2, 2): 2, (2, 3): 3, (3, 3): 4, (3, 2): 5, (2, 1): 6}
+X_disc = np.array([[obs_map[tuple(x)]] for x in observations])
+
+model_disc = hmm.MultinomialHMM(n_components=3, n_iter=100)
+model_disc.fit(X_disc)
+_, pred_disc = model_disc.decode(X_disc, algorithm="viterbi")
+
+# ------------------------------
+# Step 4: Continuous HMM
+# ------------------------------
+X_cont = np.array(observations)
+model_cont = hmm.GaussianHMM(n_components=3, covariance_type="diag", n_iter=100)
+model_cont.fit(X_cont)
+_, pred_cont = model_cont.decode(X_cont, algorithm="viterbi")
+
+# ------------------------------
+# Step 5: Evaluation
+# ------------------------------
+print("\nDiscrete HMM predicted states:", pred_disc)
+print("Continuous HMM predicted states:", pred_cont)
+
+ari_disc = adjusted_rand_score(labels, pred_disc)
+ari_cont = adjusted_rand_score(labels, pred_cont)
+
+print("\nAdjusted Rand Index (Discrete HMM):", round(ari_disc, 2))
+print("Adjusted Rand Index (Continuous HMM):", round(ari_cont, 2))

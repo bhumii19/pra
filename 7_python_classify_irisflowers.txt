@@ -1,0 +1,64 @@
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from sklearn.datasets import load_iris
+from sklearn.model_selection import train_test_split
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.metrics import accuracy_score, confusion_matrix
+import seaborn as sns
+
+# 1. Load dataset
+iris = load_iris()
+X = pd.DataFrame(iris.data, columns=iris.feature_names)
+y = pd.Series(iris.target, name='target')
+target_names = iris.target_names
+
+# 2. EDA
+print("First 5 rows of dataset:\n", X.head())
+print("\nTarget classes:", list(target_names))
+print("\nClass distribution:\n", y.value_counts())
+
+# Pairplot to visualize features
+sns.pairplot(pd.concat([X, y], axis=1), hue="target", palette="husl", markers=["o", "s", "D"])
+plt.suptitle("Pairplot of Iris Features", y=1.02)
+plt.show()
+
+# 3. Use only petal length and petal width
+X_selected = X[['petal length (cm)', 'petal width (cm)']]
+X_train, X_test, y_train, y_test = train_test_split(X_selected, y, test_size=0.3, random_state=42)
+
+# 4. Train and evaluate with different K values
+accuracies = []
+k_values = list(range(1, 11))
+
+for k in k_values:
+    knn = KNeighborsClassifier(n_neighbors=k)
+    knn.fit(X_train, y_train)
+    y_pred = knn.predict(X_test)
+    acc = accuracy_score(y_test, y_pred)
+    accuracies.append(acc)
+    print(f"K={k}: Accuracy = {acc:.2f}")
+
+# 5. Plot accuracy vs K
+plt.plot(k_values, accuracies, marker='o', color='purple')
+plt.xlabel('K value')
+plt.ylabel('Accuracy')
+plt.title('KNN Accuracy for Iris Classification')
+plt.grid(True)
+plt.show()
+
+# 6. Best K
+best_k = k_values[np.argmax(accuracies)]
+print(f"\nBest K = {best_k} with accuracy = {max(accuracies):.2f}")
+
+# 7. Final model and confusion matrix
+final_knn = KNeighborsClassifier(n_neighbors=best_k)
+final_knn.fit(X_train, y_train)
+final_pred = final_knn.predict(X_test)
+
+conf_mat = confusion_matrix(y_test, final_pred)
+sns.heatmap(conf_mat, annot=True, cmap="Blues", xticklabels=target_names, yticklabels=target_names)
+plt.xlabel("Predicted")
+plt.ylabel("Actual")
+plt.title("Confusion Matrix")
+plt.show()
