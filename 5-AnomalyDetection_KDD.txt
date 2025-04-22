@@ -1,0 +1,60 @@
+import pandas as pd
+import numpy as np
+from sklearn.preprocessing import LabelEncoder, MinMaxScaler
+from sklearn.decomposition import PCA
+from sklearn.ensemble import IsolationForest
+from sklearn.metrics import confusion_matrix, classification_report
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+# Step 1: Load dataset from UCI URL (10% KDD subset)
+url = 'http://kdd.ics.uci.edu/databases/kddcup99/kddcup.data_10_percent.gz'
+column_names = [
+    'duration','protocol_type','service','flag','src_bytes','dst_bytes','land','wrong_fragment',
+    'urgent','hot','num_failed_logins','logged_in','num_compromised','root_shell','su_attempted',
+    'num_root','num_file_creations','num_shells','num_access_files','num_outbound_cmds',
+    'is_host_login','is_guest_login','count','srv_count','serror_rate','srv_serror_rate',
+    'rerror_rate','srv_rerror_rate','same_srv_rate','diff_srv_rate','srv_diff_host_rate',
+    'dst_host_count','dst_host_srv_count','dst_host_same_srv_rate','dst_host_diff_srv_rate',
+    'dst_host_same_src_port_rate','dst_host_srv_diff_host_rate','dst_host_serror_rate',
+    'dst_host_srv_serror_rate','dst_host_rerror_rate','dst_host_srv_rerror_rate','label'
+]
+df = pd.read_csv(url, names=column_names)
+
+# Step 2: Encode categorical features
+cat_cols = ['protocol_type', 'service', 'flag']
+for col in cat_cols:
+    le = LabelEncoder()
+    df[col] = le.fit_transform(df[col])
+
+# Step 3: Convert labels to binary (normal=0, attack=1)
+df['label'] = df['label'].apply(lambda x: 0 if x == 'normal.' else 1)
+
+# Step 4: Normalize the features
+X = df.drop('label', axis=1)
+y = df['label'].values
+scaler = MinMaxScaler()
+X_scaled = scaler.fit_transform(X)
+
+# Step 5: Dimensionality reduction (PCA)
+pca = PCA(n_components=20)
+X_pca = pca.fit_transform(X_scaled)
+
+# Step 6: Anomaly detection using Isolation Forest
+model = IsolationForest(n_estimators=100, contamination=0.1, random_state=42)
+model.fit(X_pca)
+y_pred = model.predict(X_pca)
+y_pred = [1 if x == -1 else 0 for x in y_pred]
+
+# Step 7: Evaluation
+print("Confusion Matrix:")
+print(confusion_matrix(y, y_pred))
+print("\nClassification Report:")
+print(classification_report(y, y_pred, target_names=["Normal", "Anomaly"]))
+
+# Step 8: Visualize confusion matrix
+sns.heatmap(confusion_matrix(y, y_pred), annot=True, fmt='d', cmap='Blues')
+plt.xlabel("Predicted")
+plt.ylabel("Actual")
+plt.title("Confusion Matrix")
+plt.show()
